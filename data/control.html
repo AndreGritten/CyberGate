@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>CyberGate - Controle</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">CyberGate OS</div>
+        <ul class="nav-links">
+            <li><a href="/">Visão Geral</a></li>
+            <li><a href="/control.html" class="active">Controle</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/metrics.html">Métricas</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <h1>Painel de Controle</h1>
+        <p>Ações manuais e atuadores (Ativa o LED simulando o portão)</p>
+        
+        <div class="card central-card">
+            <h2>Acionamento do Portão</h2>
+            <p>Ao realizar o acionamento remoto, a Task de Controle do Arduino receberá o comando de forma assíncrona.</p>
+            <button id="btnOpenGate" class="action-btn" onclick="openGate()">ABRIR PORTÃO (SIMULAR)</button>
+            <div id="actionFeedback"></div>
+        </div>
+    </main>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

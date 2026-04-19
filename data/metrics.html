@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>CyberGate - Métricas</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">CyberGate OS</div>
+        <ul class="nav-links">
+            <li><a href="/">Visão Geral</a></li>
+            <li><a href="/control.html">Controle</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/metrics.html" class="active">Métricas</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <h1>Desempenho e Observabilidade</h1>
+        <p>Análise da memória e capacidade de concorrência</p>
+        
+        <div class="cards-grid">
+            <div class="card metric-card">
+                <h3>Uptime do Servidor</h3>
+                <div id="uptimeVal" class="metric-value">--</div>
+                <div class="metric-label">segundos</div>
+            </div>
+            
+            <div class="card metric-card">
+                <h3>Memória Heap Livre</h3>
+                <div id="heapVal" class="metric-value">--</div>
+                <div class="metric-label">bytes disponíveis</div>
+            </div>
+            
+            <div class="card metric-card">
+                <h3>Tempo da Última Requisição</h3>
+                <div id="reqTimeVal" class="metric-value">--</div>
+                <div class="metric-label">milissegundos (Tratamento JSON)</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/app.js"></script>
+    <script>
+        setInterval(() => fetchStatus(), 1000); // Reutilizamos a API do status para puxar a Heap
+        window.onload = fetchStatus;
+    </script>
+</body>
+</html>

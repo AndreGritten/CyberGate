@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>CyberGate - Logs</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">CyberGate OS</div>
+        <ul class="nav-links">
+            <li><a href="/">Visão Geral</a></li>
+            <li><a href="/control.html">Controle</a></li>
+            <li><a href="/logs.html" class="active">Logs</a></li>
+            <li><a href="/metrics.html">Métricas</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <h1>Centro de Eventos (Logs)</h1>
+        <p>Monitoramento das threads através do FreeRTOS</p>
+        
+        <div class="card log-container">
+            <ul id="logList">
+                <li class="loading">Carregando logs do sistema...</li>
+            </ul>
+        </div>
+    </main>
+
+    <script src="/js/app.js"></script>
+    <script>
+        setInterval(() => fetchLogs(), 2000);
+        window.onload = fetchLogs;
+    </script>
+</body>
+</html>
