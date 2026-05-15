@@ -11,8 +11,8 @@ extern void sensorTaskCode(void *pvParameters);
 extern void controlTaskCode(void *pvParameters);
 
 // Configuração da Rede WiFi (Ajuste para a sua rede)
-const char* ssid = "VIVOFIBRA-LOKI";
-const char* password = "Loki043007!";
+const char* ssid = "gritten";
+const char* password = "casa1802";
 
 SemaphoreHandle_t logMutex;
 
