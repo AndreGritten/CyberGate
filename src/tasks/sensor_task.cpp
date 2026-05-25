@@ -91,6 +91,7 @@ void sensorTaskCode(void *pvParameters) {
     addLog("SISTEMA", "Task de Sensores iniciada com hardware real.");
 
     for (;;) {
+        unsigned long startUs = micros();
         // -----------------------------------------------
         // ETAPA 1: Leitura do Sensor Ultrassônico
         // -----------------------------------------------
@@ -134,6 +135,8 @@ void sensorTaskCode(void *pvParameters) {
                 rfid.PCD_StopCrypto1();
             }
         }
+
+        recordFunctionPerf(0, micros() - startUs);
 
         // Pausa não-bloqueante de 300ms
         vTaskDelay(pdMS_TO_TICKS(300));

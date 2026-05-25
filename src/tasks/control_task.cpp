@@ -15,9 +15,12 @@ void controlTaskCode(void *pvParameters) {
     addLog("SISTEMA", "Task de Controle iniciada.");
 
     for (;;) {
+        unsigned long startUs = micros();
+
         // Atualiza métricas de gerenciamento de memória no estado do sistema
         freeHeapMemory = ESP.getFreeHeap();
         totalUptime = millis() / 1000;
+        pushMemorySample(freeHeapMemory);
 
         // Verifica se houve comando via Web (isGateOpen foi setada para true)
         // Ou se houve aprovação pelo sensor
@@ -37,6 +40,8 @@ void controlTaskCode(void *pvParameters) {
             // Garante que o LED fique apagado
             digitalWrite(GATE_LED_PIN, LOW);
         }
+
+        recordFunctionPerf(1, micros() - startUs);
 
         // Pausa de 200 milissegundos
         vTaskDelay(pdMS_TO_TICKS(200)); 

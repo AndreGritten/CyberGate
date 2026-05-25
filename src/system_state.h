@@ -25,6 +25,25 @@ extern volatile unsigned long totalUptime;
 extern volatile unsigned int freeHeapMemory;
 extern volatile unsigned long lastRequestTimeMs; // Tempo que demorou a última request
 
+// Performance tracking
+constexpr int PERFORMANCE_HISTORY_SIZE = 20;
+
+struct FunctionPerf {
+    const char* name;
+    unsigned long callCount;
+    unsigned long totalTimeUs;
+    unsigned long lastTimeUs;
+    unsigned long maxTimeUs;
+};
+
+extern FunctionPerf performanceData[5];
+extern unsigned long memoryHistory[PERFORMANCE_HISTORY_SIZE];
+extern unsigned int memoryHistorySize;
+extern unsigned int memoryHistoryIndex;
+
+void recordFunctionPerf(uint8_t index, unsigned long durationUs);
+void pushMemorySample(unsigned int heapFree);
+
 // Controle de Logs (Armazenados na RAM para nossa simulação)
 extern std::vector<SystemLog> systemLogs;
 extern SemaphoreHandle_t logMutex; // Disponibilizado globalmente

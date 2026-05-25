@@ -2,6 +2,13 @@
 const API_STATUS = '/api/status';
 const API_CONTROL = '/api/control';
 const API_LOGS = '/api/logs';
+const API_PERFORMANCE = '/api/performance';
+
+let memoryChart = null;
+
+function formatTimeMs(usec) {
+    return (usec / 1000).toFixed(2) + ' ms';
+}
 
 // Função para buscar status do sistema para Dashboard e Métricas
 async function fetchStatus() {
@@ -35,6 +42,56 @@ async function fetchStatus() {
 
     } catch(err) {
         console.error("Falha ao buscar status", err);
+    }
+}
+
+async function fetchPerformance() {
+    try {
+        const res = await fetch(API_PERFORMANCE);
+        if (!res.ok) throw new Error('Erro rede');
+        const data = await res.json();
+
+        const upEl = document.getElementById('uptimeVal');
+        if (upEl) upEl.textContent = data.uptime;
+        const heapEl = document.getElementById('heapVal');
+        if (heapEl) heapEl.textContent = data.memoryFree;
+        const reqEl = document.getElementById('reqTimeVal');
+        if (reqEl) reqEl.textContent = data.lastRequestTimeMs;
+
+        // tabela de funções
+        const functionBody = document.getElementById('perfTableBody');
+        if (functionBody) {
+            functionBody.innerHTML = '';
+            data.functions.forEach(fn => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${fn.name}</td><td>${fn.calls}</td><td>${formatTimeMs(fn.lastUs)}</td><td>${formatTimeMs(fn.avgUs)}</td><td>${formatTimeMs(fn.maxUs)}</td>`;
+                functionBody.appendChild(tr);
+            });
+        }
+
+        // gráfico de memória (Chart.js)
+        const ctx = document.getElementById('memoryChartCanvas');
+        if (ctx) {
+            const labels = data.memoryHistory.map((_,i) => (i+1).toString());
+            const dataset = data.memoryHistory;
+            if (!memoryChart) {
+                memoryChart = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{ label: 'Heap livre (bytes)', data: dataset, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', tension: 0.3 }]
+                    },
+                    options: { scales: { y: { beginAtZero: true } } }
+                });
+            } else {
+                memoryChart.data.labels = labels;
+                memoryChart.data.datasets[0].data = dataset;
+                memoryChart.update();
+            }
+        }
+
+    } catch(err) {
+        console.error('Falha ao buscar performance', err);
     }
 }
 

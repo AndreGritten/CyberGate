@@ -6,7 +6,7 @@ void setupRoutes(AsyncWebServer* server) {
 
     // Rota GET /api/status - Retorna os dados globais do sistema em formato JSON
     server->on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request){
-        unsigned long start = millis(); // Para medir desempenho
+        unsigned long startUs = micros(); // Para medir desempenho
 
         // Cria o documento JSON
         StaticJsonDocument<256> doc;
@@ -22,8 +22,9 @@ void setupRoutes(AsyncWebServer* server) {
         serializeJson(doc, response);
         
         // Simulação do tempo que demorou a requisição - Monitoramento de Desempenho
-        lastRequestTimeMs = millis() - start;
+        lastRequestTimeMs = (millis() - (startUs / 1000));
         doc["requestTime"] = lastRequestTimeMs; 
+        recordFunctionPerf(2, micros() - startUs);
         
         // Enviamos tudo novamente com esse último campo adicionado
         response = "";
@@ -54,7 +55,7 @@ void setupRoutes(AsyncWebServer* server) {
     // Rota GET /api/logs - Retorna a fila em memória com as últimas atividades
     server->on("/api/logs", HTTP_GET, [](AsyncWebServerRequest *request){
         // ArduinoJson dinâmico para poder ter array variável
-        DynamicJsonDocument doc(2048); 
+        DynamicJsonDocument doc(3072); 
         JsonArray logsArray = doc.createNestedArray("logs");
 
         // Bloqueamos temporariamente os logs para garantir que ninguém adicione nada na memória
@@ -68,12 +69,41 @@ void setupRoutes(AsyncWebServer* server) {
             }
             xSemaphoreGive(logMutex);
             
+            recordFunctionPerf(3, micros() - startUs);
             String response;
             serializeJson(doc, response);
             request->send(200, "application/json", response);
         } else {
             request->send(500, "application/json", "{\"error\":\"Server Busy\"}");
         }
+    });
+
+    // Rota GET /api/performance - Retorna métricas de funções e histórico de memória
+    server->on("/api/performance", HTTP_GET, [](AsyncWebServerRequest *request){
+        DynamicJsonDocument doc(4096);
+        doc["uptime"] = totalUptime;
+        doc["memoryFree"] = freeHeapMemory;
+        doc["lastRequestTimeMs"] = lastRequestTimeMs;
+
+        JsonArray historyArray = doc.createNestedArray("memoryHistory");
+        for (unsigned int i = 0; i < memoryHistorySize; i++) {
+            unsigned int idx = (memoryHistoryIndex + i) % PERFORMANCE_HISTORY_SIZE;
+            historyArray.add(memoryHistory[idx]);
+        }
+
+        JsonArray perfArray = doc.createNestedArray("functions");
+        for (uint8_t i = 0; i < 5; i++) {
+            JsonObject it = perfArray.createNestedObject();
+            it["name"] = performanceData[i].name;
+            it["calls"] = performanceData[i].callCount;
+            it["lastUs"] = performanceData[i].lastTimeUs;
+            it["avgUs"] = performanceData[i].callCount ? (performanceData[i].totalTimeUs / performanceData[i].callCount) : 0;
+            it["maxUs"] = performanceData[i].maxTimeUs;
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
     });
 
 }

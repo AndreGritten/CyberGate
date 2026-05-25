@@ -163,3 +163,40 @@ p {
     margin-right: 1rem;
     font-size: 0.8rem;
 }
+
+
+.full-card {
+    grid-column: 1 / -1;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.perf-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.perf-table th,
+.perf-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    text-align: left;
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.perf-table th {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+#memoryChartCanvas {
+    width: 100% !important;
+    height: 220px !important;
+}
+
