@@ -15,7 +15,10 @@ struct SystemLog {
 // Usamos volatile para variáveis que são alteradas dentro de Tasks e lidas em outras.
 extern volatile bool isGateOpen;
 extern volatile bool vehicleDetected;
+extern volatile bool rfidActive;           // RFID está ativado (veículo próximo)
 extern volatile unsigned long gateOpenedAt;
+extern volatile float lastDistanceCm;      // Última leitura do ultrassônico
+extern String lastRfidUid;                 // UID do último cartão lido
 
 // Métricas de Performance
 extern volatile unsigned long totalUptime;

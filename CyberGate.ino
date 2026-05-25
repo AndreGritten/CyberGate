@@ -46,7 +46,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         sensorTaskCode,   /* Função da Task */
         "SensorTask",     /* Nome para debug */
-        4096,             /* Tamanho da Pilha (Memória Ram reservada para a task) */
+        8192,             /* Tamanho da Pilha — aumentado para suportar SPI + MFRC522 */
         NULL,             /* Parâmetros. Nenhum. */
         1,                /* Prioridade baixa/Media */
         NULL,             /* Handle da task (não usaremos) */

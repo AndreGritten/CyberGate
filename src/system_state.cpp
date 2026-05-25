@@ -3,7 +3,10 @@
 // Inicialização das variáveis globais
 volatile bool isGateOpen = false;
 volatile bool vehicleDetected = false;
+volatile bool rfidActive = false;
 volatile unsigned long gateOpenedAt = 0;
+volatile float lastDistanceCm = 0;
+String lastRfidUid = "";
 
 volatile unsigned long totalUptime = 0;
 volatile unsigned int freeHeapMemory = 0;

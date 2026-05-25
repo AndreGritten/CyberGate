@@ -12,6 +12,9 @@ void setupRoutes(AsyncWebServer* server) {
         StaticJsonDocument<256> doc;
         doc["isGateOpen"] = isGateOpen;
         doc["vehicleDetected"] = vehicleDetected;
+        doc["rfidActive"] = rfidActive;
+        doc["distance"] = lastDistanceCm;
+        doc["lastUid"] = lastRfidUid;
         doc["uptime"] = totalUptime;
         doc["memoryFree"] = freeHeapMemory;
         
