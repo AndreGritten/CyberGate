@@ -33,6 +33,7 @@ void controlTaskCode(void *pvParameters) {
                 // Terminou o tempo, fecha o portão
                 isGateOpen = false;
                 vehicleDetected = false; // Resetamos a simulação do sensor
+                rfidActive = false;
                 digitalWrite(GATE_LED_PIN, LOW);
                 addLog("CONTROLE", "Portão fechado.");
             }

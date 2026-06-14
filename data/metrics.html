@@ -2,50 +2,150 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>CyberGate - Métricas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberGate - Metricas</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <nav class="sidebar">
-        <div class="logo">CyberGate OS</div>
+        <div class="logo">
+            <span class="logo-mark"></span>
+            <span>CyberGate</span>
+        </div>
         <ul class="nav-links">
-            <li><a href="/">Visão Geral</a></li>
+            <li><a href="/">Visao Geral</a></li>
             <li><a href="/control.html">Controle</a></li>
             <li><a href="/logs.html">Logs</a></li>
-            <li><a href="/metrics.html" class="active">Métricas</a></li>
+            <li><a href="/metrics.html" class="active">Metricas</a></li>
         </ul>
     </nav>
+
     <main class="content">
-        <h1>Desempenho e Observabilidade</h1>
-        <p>Análise da memória e capacidade de concorrência</p>
-        
-        <div class="card full-card">
-            <h3>Principais funções monitoradas</h3>
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Performance e observabilidade</span>
+                <h1>Metricas do ESP32</h1>
+                <p>Uso de recursos, sensores, rede, tasks e tempo das funcoes principais.</p>
+            </div>
+        </section>
+
+        <section class="cards-grid metrics-summary">
+            <article class="card metric-card">
+                <h3>Uptime</h3>
+                <div id="uptimeVal" class="metric-value">--</div>
+                <div class="metric-label">segundos</div>
+            </article>
+
+            <article class="card metric-card">
+                <h3>Heap livre</h3>
+                <div id="heapVal" class="metric-value">--</div>
+                <div class="metric-label">memoria disponivel</div>
+            </article>
+
+            <article class="card metric-card">
+                <h3>Uso de CPU</h3>
+                <div id="cpuVal" class="metric-value">--</div>
+                <div id="cpuFreqVal" class="metric-label">MHz</div>
+            </article>
+
+            <article class="card metric-card">
+                <h3>Ultima requisicao</h3>
+                <div id="reqTimeVal" class="metric-value">--</div>
+                <div class="metric-label">milissegundos</div>
+            </article>
+
+            <article class="card metric-card">
+                <h3>Wi-Fi</h3>
+                <div id="wifiStatusVal" class="metric-value compact-value">--</div>
+                <div id="wifiDetailVal" class="metric-label">--</div>
+            </article>
+
+            <article class="card metric-card">
+                <h3>Sensor</h3>
+                <div id="sensorVal" class="metric-value compact-value">--</div>
+                <div id="sensorDetailVal" class="metric-label">--</div>
+            </article>
+        </section>
+
+        <section class="resource-grid">
+            <article class="card">
+                <h3>Memoria e armazenamento</h3>
+                <div id="resourceList" class="metric-list"></div>
+            </article>
+
+            <article class="card">
+                <h3>Conexao Wi-Fi e AP</h3>
+                <div id="wifiList" class="metric-list"></div>
+            </article>
+        </section>
+
+        <section class="chart-grid">
+            <article class="card">
+                <h3>Uso de recursos</h3>
+                <canvas id="resourceChartCanvas" class="metric-chart"></canvas>
+                <div class="metric-label chart-caption">CPU estimada, heap e PSRAM ao longo das coletas</div>
+            </article>
+
+            <article class="card">
+                <h3>Dados dos sensores</h3>
+                <canvas id="sensorChartCanvas" class="metric-chart"></canvas>
+                <div class="metric-label chart-caption">Distancia do ultrassonico e estado do RFID</div>
+            </article>
+        </section>
+
+        <section class="card full-card">
+            <h3>Principais funcoes monitoradas</h3>
             <div class="table-container">
                 <table class="perf-table">
                     <thead>
                         <tr>
-                            <th>Função</th>
+                            <th>Funcao</th>
                             <th>Chamadas</th>
-                            <th>Último</th>
-                            <th>Média</th>
-                            <th>Máximo</th>
+                            <th>Ultimo</th>
+                            <th>Media</th>
+                            <th>Maximo</th>
                         </tr>
                     </thead>
                     <tbody id="perfTableBody">
-                        <tr><td colspan="5">Carregando métricas...</td></tr>
+                        <tr><td colspan="5">Carregando metricas...</td></tr>
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div class="card full-card">
-            <h3>Histórico de memória livre</h3>
-            <canvas id="memoryChartCanvas" style="width:100%; height:220px"></canvas>
-            <div class="metric-label" style="margin-top:1rem;">Últimos pontos de heap usados</div>
-        </div>
+        <section class="card full-card">
+            <h3>Tasks e threads</h3>
+            <div class="table-container">
+                <table class="perf-table">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Prioridade</th>
+                            <th>Nucleo</th>
+                            <th>Periodo</th>
+                            <th>Stack livre</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskTableBody">
+                        <tr><td colspan="5">Carregando tasks...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="chart-grid">
+            <article class="card">
+                <h3>Historico de heap livre</h3>
+                <canvas id="memoryChartCanvas" class="metric-chart"></canvas>
+                <div class="metric-label chart-caption">Ultimas amostras coletadas pela task de controle</div>
+            </article>
+
+            <article class="card">
+                <h3>Tempo medio por funcao</h3>
+                <canvas id="functionChartCanvas" class="metric-chart"></canvas>
+                <div class="metric-label chart-caption">Comparacao em milissegundos das funcoes instrumentadas</div>
+            </article>
+        </section>
     </main>
 
     <script src="/js/app.js"></script>

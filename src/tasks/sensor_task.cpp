@@ -99,34 +99,43 @@ void sensorTaskCode(void *pvParameters) {
 
         if (distancia > 0) {
             lastDistanceCm = distancia; // Atualiza estado global para a API
+            bool vehicleInRange = distancia <= DETECTION_DISTANCE_CM;
 
-            // Veículo detectado dentro do alcance?
-            if (!vehicleDetected && distancia <= DETECTION_DISTANCE_CM) {
-                vehicleDetected = true;
-                rfidActive = true;
+            if (vehicleInRange && !vehicleDetected) {
                 addLog("SENSOR", "Veiculo detectado a " + String(distancia, 1) + "cm. RFID ativado!");
-            }
-            // Veículo saiu do alcance e portão não está aberto?
-            else if (vehicleDetected && !isGateOpen && distancia > DETECTION_DISTANCE_CM) {
-                vehicleDetected = false;
-                rfidActive = false;
+            } else if (!vehicleInRange && vehicleDetected) {
                 addLog("SENSOR", "Veiculo saiu do alcance (" + String(distancia, 1) + "cm). RFID desativado.");
             }
+
+            vehicleDetected = vehicleInRange;
+            rfidActive = vehicleDetected && !isGateOpen;
+        } else {
+            if (vehicleDetected || rfidActive) {
+                addLog("SENSOR", "Sem leitura valida do ultrassonico. RFID desativado.");
+            }
+            vehicleDetected = false;
+            rfidActive = false;
         }
 
         // -----------------------------------------------
         // ETAPA 2: Leitura RFID (só ativa quando veículo está próximo)
         // -----------------------------------------------
-        if (rfidActive && !isGateOpen) {
+        if (vehicleDetected && rfidActive && !isGateOpen) {
             if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
                 String uid = getCardUID();
                 lastRfidUid = uid;
 
                 if (isAuthorized(uid)) {
+                    lastRfidStatus = "authorized";
+                    lastRfidMessage = "Tag autorizada";
+                    lastRfidAt = millis();
                     addLog("RFID", "TAG AUTORIZADA [" + uid + "]. Abrindo portão!");
                     isGateOpen = true;
                     gateOpenedAt = millis();
                 } else {
+                    lastRfidStatus = "denied";
+                    lastRfidMessage = "Tag negada";
+                    lastRfidAt = millis();
                     addLog("RFID", "TAG NEGADA [" + uid + "]. Acesso bloqueado.");
                 }
 

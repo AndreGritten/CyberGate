@@ -2,29 +2,38 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyberGate - Logs</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="sidebar">
-        <div class="logo">CyberGate OS</div>
+        <div class="logo">
+            <span class="logo-mark"></span>
+            <span>CyberGate</span>
+        </div>
         <ul class="nav-links">
-            <li><a href="/">Visão Geral</a></li>
+            <li><a href="/">Visao Geral</a></li>
             <li><a href="/control.html">Controle</a></li>
             <li><a href="/logs.html" class="active">Logs</a></li>
-            <li><a href="/metrics.html">Métricas</a></li>
+            <li><a href="/metrics.html">Metricas</a></li>
         </ul>
     </nav>
+
     <main class="content">
-        <h1>Centro de Eventos (Logs)</h1>
-        <p>Monitoramento das threads através do FreeRTOS</p>
-        
-        <div class="card log-container">
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Eventos do sistema</span>
+                <h1>Centro de Logs</h1>
+                <p>Historico recente das tasks, sensores, RFID, rede e controle.</p>
+            </div>
+        </section>
+
+        <article class="card log-container">
             <ul id="logList">
                 <li class="loading">Carregando logs do sistema...</li>
             </ul>
-        </div>
+        </article>
     </main>
 
     <script src="/js/app.js"></script>

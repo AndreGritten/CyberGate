@@ -49,7 +49,7 @@ void setup() {
         8192,             /* Tamanho da Pilha — aumentado para suportar SPI + MFRC522 */
         NULL,             /* Parâmetros. Nenhum. */
         1,                /* Prioridade baixa/Media */
-        NULL,             /* Handle da task (não usaremos) */
+        &sensorTaskHandle,
         1                 /* Núcleo do processador ESP32 (0 ou 1) */
     );
     
@@ -58,7 +58,7 @@ void setup() {
         controlTaskCode,   
         "ControlTask",     
         4096,             
-        NULL,             
+        &controlTaskHandle,
         2,                /* Prioridade alta que a do Sensor */
         NULL,             
         1                 

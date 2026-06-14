@@ -19,6 +19,9 @@ extern volatile bool rfidActive;           // RFID está ativado (veículo próx
 extern volatile unsigned long gateOpenedAt;
 extern volatile float lastDistanceCm;      // Última leitura do ultrassônico
 extern String lastRfidUid;                 // UID do último cartão lido
+extern String lastRfidStatus;              // none, authorized, denied
+extern String lastRfidMessage;             // Mensagem curta da ultima tentativa RFID
+extern volatile unsigned long lastRfidAt;  // Timestamp da ultima tentativa RFID
 
 // Métricas de Performance
 extern volatile unsigned long totalUptime;
@@ -40,6 +43,8 @@ extern FunctionPerf performanceData[5];
 extern unsigned long memoryHistory[PERFORMANCE_HISTORY_SIZE];
 extern unsigned int memoryHistorySize;
 extern unsigned int memoryHistoryIndex;
+extern TaskHandle_t sensorTaskHandle;
+extern TaskHandle_t controlTaskHandle;
 
 void recordFunctionPerf(uint8_t index, unsigned long durationUs);
 void pushMemorySample(unsigned int heapFree);

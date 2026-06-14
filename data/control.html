@@ -2,32 +2,64 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyberGate - Controle</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="sidebar">
-        <div class="logo">CyberGate OS</div>
+        <div class="logo">
+            <span class="logo-mark"></span>
+            <span>CyberGate</span>
+        </div>
         <ul class="nav-links">
-            <li><a href="/">Visão Geral</a></li>
+            <li><a href="/">Visao Geral</a></li>
             <li><a href="/control.html" class="active">Controle</a></li>
             <li><a href="/logs.html">Logs</a></li>
-            <li><a href="/metrics.html">Métricas</a></li>
+            <li><a href="/metrics.html">Metricas</a></li>
         </ul>
     </nav>
+
     <main class="content">
-        <h1>Painel de Controle</h1>
-        <p>Ações manuais e atuadores (Ativa o LED simulando o portão)</p>
-        
-        <div class="card central-card">
-            <h2>Acionamento do Portão</h2>
-            <p>Ao realizar o acionamento remoto, a Task de Controle do Arduino receberá o comando de forma assíncrona.</p>
-            <button id="btnOpenGate" class="action-btn" onclick="openGate()">ABRIR PORTÃO (SIMULAR)</button>
-            <div id="actionFeedback"></div>
-        </div>
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Acionamento manual</span>
+                <h1>Painel de Controle</h1>
+                <p>Envie comandos para o atuador e acompanhe o estado visual do portao.</p>
+            </div>
+        </section>
+
+        <section class="control-layout">
+            <article class="card command-panel">
+                <h3>Acionamento do portao</h3>
+                <p>O comando abre o portao pelo fluxo assincrono da task de controle.</p>
+                <button id="btnOpenGate" class="action-btn" onclick="openGate()">Abrir portao</button>
+                <div id="actionFeedback" class="action-feedback"></div>
+            </article>
+
+            <article id="controlGateScene" class="card mini-gate-card">
+                <h3>Estado ao vivo</h3>
+                <div class="gate-animation compact" aria-hidden="true">
+                    <div class="gate-track top"></div>
+                    <div class="gate-track bottom"></div>
+                    <div class="gate-leaf left">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="gate-leaf right">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="gate-post left"></div>
+                    <div class="gate-post right"></div>
+                </div>
+                <div id="gateStatus" class="status-chip loading">Verificando...</div>
+            </article>
+        </section>
     </main>
 
     <script src="/js/app.js"></script>
+    <script>
+        setInterval(() => fetchStatus(), 1000);
+        window.onload = fetchStatus;
+    </script>
 </body>
 </html>

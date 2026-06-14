@@ -7,6 +7,9 @@ volatile bool rfidActive = false;
 volatile unsigned long gateOpenedAt = 0;
 volatile float lastDistanceCm = 0;
 String lastRfidUid = "";
+String lastRfidStatus = "none";
+String lastRfidMessage = "Aguardando leitura";
+volatile unsigned long lastRfidAt = 0;
 
 volatile unsigned long totalUptime = 0;
 volatile unsigned int freeHeapMemory = 0;
@@ -23,6 +26,8 @@ FunctionPerf performanceData[5] = {
 unsigned long memoryHistory[PERFORMANCE_HISTORY_SIZE] = {0};
 unsigned int memoryHistorySize = 0;
 unsigned int memoryHistoryIndex = 0;
+TaskHandle_t sensorTaskHandle = NULL;
+TaskHandle_t controlTaskHandle = NULL;
 
 void recordFunctionPerf(uint8_t index, unsigned long durationUs) {
     if (index >= 5) return;

@@ -3,40 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberGate - Status</title>
+    <title>CyberGate - Visao Geral</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="sidebar">
-        <div class="logo">CyberGate OS</div>
+        <div class="logo">
+            <span class="logo-mark"></span>
+            <span>CyberGate</span>
+        </div>
         <ul class="nav-links">
-            <li><a href="/" class="active">Visão Geral</a></li>
+            <li><a href="/" class="active">Visao Geral</a></li>
             <li><a href="/control.html">Controle</a></li>
             <li><a href="/logs.html">Logs</a></li>
-            <li><a href="/metrics.html">Métricas</a></li>
+            <li><a href="/metrics.html">Metricas</a></li>
         </ul>
     </nav>
-    <main class="content">
-        <h1>Visão Geral do Sistema</h1>
-        <p>Monitoramento em tempo real do acesso aos CyberGates</p>
-        
-        <div class="cards-grid">
-            <div class="card">
-                <h3>Status do Portão</h3>
-                <div id="gateStatus" class="status-indicator loading">Verificando...</div>
+
+    <main class="content dashboard-page">
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Acesso inteligente</span>
+                <h1>Visao Geral do Sistema</h1>
+                <p>Monitoramento em tempo real do portao, sensores e autorizacao RFID.</p>
             </div>
-            
-            <div class="card">
-                <h3>Presença Veicular</h3>
-                <div id="vehicleStatus" class="status-indicator loading">Verificando...</div>
+            <div id="systemPulse" class="system-pill">Conectando...</div>
+        </section>
+
+        <section id="gateScene" class="gate-stage">
+            <div class="gate-copy">
+                <span id="gateStatus" class="status-chip loading">Verificando...</span>
+                <h2 id="gateHeadline">Portao em monitoramento</h2>
+                <p id="gateSubline">Aguardando dados do controlador ESP32.</p>
             </div>
-        </div>
+
+            <div class="gate-animation" aria-hidden="true">
+                <div class="gate-skyline"></div>
+                <div class="gate-track top"></div>
+                <div class="gate-track bottom"></div>
+                <div class="gate-leaf left">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="gate-leaf right">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="gate-post left"></div>
+                <div class="gate-post right"></div>
+                <div class="vehicle-marker"></div>
+                <div class="rfid-beam"></div>
+            </div>
+        </section>
+
+        <section class="cards-grid overview-grid">
+            <article class="card status-card">
+                <h3>Veiculo aguardando</h3>
+                <div id="vehicleStatus" class="metric-value compact-value">--</div>
+                <div id="vehicleDetail" class="metric-label">Distancia: --</div>
+            </article>
+
+            <article class="card status-card">
+                <h3>Leitor RFID</h3>
+                <div id="rfidStatus" class="metric-value compact-value">--</div>
+                <div id="rfidDetail" class="metric-label">UID: --</div>
+            </article>
+
+            <article class="card status-card">
+                <h3>Ultima tentativa RFID</h3>
+                <div id="rfidAttemptStatus" class="metric-value compact-value">--</div>
+                <div id="rfidAttemptDetail" class="metric-label">Aguardando leitura</div>
+            </article>
+
+            <article class="card status-card">
+                <h3>Saude do ESP32</h3>
+                <div id="uptimeVal" class="metric-value compact-value">--</div>
+                <div id="heapVal" class="metric-label">Heap: --</div>
+            </article>
+        </section>
     </main>
 
     <script src="/js/app.js"></script>
     <script>
-        // Especifico desta pagina: Padrão de autoupdate do painel inicial
         setInterval(() => fetchStatus(), 1000);
         window.onload = fetchStatus;
     </script>
