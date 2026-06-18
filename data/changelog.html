@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberGate - Changelog</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-mark"></span>
+            <span>CyberGate</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Visao Geral</a></li>
+            <li><a href="/control.html">Controle</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/metrics.html">Performance</a></li>
+            <li><a href="/config.html">Configuracao</a></li>
+            <li><a href="/about.html">Sobre</a></li>
+            <li><a href="/changelog.html" class="active">Changelog</a></li>
+        </ul>
+    </nav>
+
+    <main class="content">
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Historico do sistema</span>
+                <h1>Changelog</h1>
+                <p>Registro das mudancas do projeto por versao, usado para mostrar evolucao do firmware, interface web, persistencia e observabilidade.</p>
+            </div>
+        </section>
+
+        <article class="card full-card">
+            <h3>V1.1 - Adequacao TDE</h3>
+            <div class="metric-list">
+                <div class="metric-list-row"><span>Persistencia</span><strong>Logs e metricas salvos em LittleFS com rotacao.</strong></div>
+                <div class="metric-list-row"><span>Observabilidade</span><strong>Exportacao CSV, Performance, tasks, Wi-Fi, memoria e energia.</strong></div>
+                <div class="metric-list-row"><span>Configuracao</span><strong>Parametros operacionais e Wi-Fi configuraveis pela web.</strong></div>
+                <div class="metric-list-row"><span>Energia</span><strong>Light Sleep conservador em estado ocioso.</strong></div>
+                <div class="metric-list-row"><span>Hardware</span><strong>Medicao ultrassonica com interrupcao no ECHO.</strong></div>
+            </div>
+        </article>
+
+        <article class="card full-card">
+            <h3>V1.0 - Base funcional</h3>
+            <div class="metric-list">
+                <div class="metric-list-row"><span>Controle</span><strong>Acionamento do portao por servo MG996R.</strong></div>
+                <div class="metric-list-row"><span>Sensores</span><strong>HC-SR04 para presenca e RC522 para RFID.</strong></div>
+                <div class="metric-list-row"><span>Web</span><strong>Interface embarcada com visao geral, logs, controle e metricas.</strong></div>
+            </div>
+        </article>
+    </main>
+</body>
+</html>

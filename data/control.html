@@ -16,7 +16,10 @@
             <li><a href="/">Visao Geral</a></li>
             <li><a href="/control.html" class="active">Controle</a></li>
             <li><a href="/logs.html">Logs</a></li>
-            <li><a href="/metrics.html">Metricas</a></li>
+            <li><a href="/metrics.html">Performance</a></li>
+            <li><a href="/config.html">Configuracao</a></li>
+            <li><a href="/about.html">Sobre</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
         </ul>
     </nav>
 
@@ -32,8 +35,11 @@
         <section class="control-layout">
             <article class="card command-panel">
                 <h3>Acionamento do portao</h3>
-                <p>O comando abre o portao pelo fluxo assincrono da task de controle.</p>
-                <button id="btnOpenGate" class="action-btn" onclick="openGate()">Abrir portao</button>
+                <p>Use os botoes para abrir ou fechar manualmente.</p>
+                <div class="manual-gate-buttons">
+                    <button id="btnOpenGate" class="action-btn" onclick="controlGate('openGate')">Abrir portao</button>
+                    <button id="btnCloseGate" class="action-btn close-btn" onclick="controlGate('closeGate')">Fechar portao</button>
+                </div>
                 <div id="actionFeedback" class="action-feedback"></div>
             </article>
 
@@ -54,9 +60,36 @@
                 <div id="gateStatus" class="status-chip loading">Verificando...</div>
             </article>
         </section>
+
+        <section class="card calibration-panel">
+            <span class="eyebrow">Ajuste fino do MG996R</span>
+            <h2>Calibracao da cremalheira</h2>
+            <p>Use passos pequenos e observe a mecanica. O servo nunca ultrapassa 0 a 180 graus. Se o sentido estiver invertido na sua montagem, use os botoes pelo sinal + ou -.</p>
+
+            <div class="servo-readout">
+                <div><span>Posicao atual</span><strong id="servoCurrentAngle">-- graus</strong></div>
+                <div><span>Fechado salvo</span><strong id="servoClosedAngle">-- graus</strong></div>
+                <div><span>Aberto salvo</span><strong id="servoOpenAngle">-- graus</strong></div>
+            </div>
+
+            <div class="servo-step-grid">
+                <button class="secondary-btn" onclick="stepServo(-90)">Puxar -90 graus</button>
+                <button class="secondary-btn" onclick="stepServo(90)">Empurrar +90 graus</button>
+            </div>
+
+            <div class="servo-save-grid">
+                <button class="action-btn" onclick="servoAction('saveClosed')">Registrar como fechado</button>
+                <button class="action-btn" onclick="servoAction('saveOpen')">Registrar como aberto</button>
+                <button class="secondary-btn" onclick="servoAction('testClosed')">Testar fechado</button>
+                <button class="secondary-btn" onclick="servoAction('testOpen')">Testar aberto</button>
+            </div>
+
+            <button class="finish-btn" onclick="servoAction('finishCalibration')">Concluir calibracao e fechar</button>
+            <div id="calibrationFeedback" class="action-feedback"></div>
+        </section>
     </main>
 
-    <script src="/js/app.js"></script>
+    <script src="/js/app.js?v=4"></script>
     <script>
         setInterval(() => fetchStatus(), 1000);
         window.onload = fetchStatus;

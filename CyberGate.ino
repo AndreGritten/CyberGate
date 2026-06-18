@@ -1,74 +1,146 @@
 #include <Arduino.h>
 #include <WiFi.h>
-
-// Incluindo nossos módulos da pasta src
+#include <esp_sleep.h>
 #include "src/system_state.h"
 
-// Se estiver no Arduino IDE, as declaracoes das funções podem precisar existir aqui
-// ou podemos criar os ".h" de cada. Simplificando via forward declaration:
 extern void initWebServer();
 extern void sensorTaskCode(void *pvParameters);
 extern void controlTaskCode(void *pvParameters);
 
-// Configuração da Rede WiFi (Ajuste para a sua rede)
-const char* ssid = "gritten";
-const char* password = "casa1802";
+static const char* SETUP_AP_SSID = "CyberGate-Setup";
+static const char* SETUP_AP_PASSWORD = "cybergate";
+static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 12000;
+static const unsigned long LIGHT_SLEEP_IDLE_MS = 15000;
+static const unsigned long LIGHT_SLEEP_WEB_IDLE_MS = 10000;
+static const uint64_t LIGHT_SLEEP_WAKE_US = 250000ULL;
+static const BaseType_t SENSOR_TASK_CORE = 1;
+static const BaseType_t CONTROL_TASK_CORE = 0;
 
 SemaphoreHandle_t logMutex;
+static unsigned long wifiAttemptStartedAt = 0;
+static bool wifiConnecting = false;
+
+static void startSetupAccessPoint() {
+    WiFi.mode(WIFI_AP_STA);
+    bool apStarted = WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASSWORD, 6, false, 4);
+    wifiApActive = apStarted;
+    wifiModeLabel = apStarted ? "AP fallback" : "Falha no AP";
+    activeWifiSsid = apStarted ? SETUP_AP_SSID : "";
+    if (apStarted) {
+        addLog("REDE", String("AP de configuracao ativo: ") + SETUP_AP_SSID + " IP " + WiFi.softAPIP().toString());
+    } else {
+        addLog("ERRO", "Falha ao iniciar AP de configuracao CyberGate-Setup.");
+    }
+}
+
+static void connectConfiguredWifi() {
+    if (systemConfig.wifiSsid.length() == 0) {
+        addLog("REDE", "Nenhum Wi-Fi salvo. Abrindo AP de configuracao.");
+        startSetupAccessPoint();
+        return;
+    }
+
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.begin(systemConfig.wifiSsid.c_str(), systemConfig.wifiPassword.c_str());
+    wifiModeLabel = "Conectando";
+    activeWifiSsid = systemConfig.wifiSsid;
+    wifiConnecting = true;
+    wifiAttemptStartedAt = millis();
+    addLog("REDE", "Tentando conectar ao Wi-Fi salvo: " + maskedWifiSsid());
+}
+
+static void monitorWifiConnection() {
+    if (!wifiConnecting && systemConfig.wifiSsid.length() > 0 && WiFi.status() == WL_CONNECTED && wifiApActive) {
+        WiFi.softAPdisconnect(true);
+        WiFi.mode(WIFI_STA);
+        wifiApActive = false;
+        wifiModeLabel = "Cliente Wi-Fi";
+        activeWifiSsid = WiFi.SSID();
+        addLog("REDE", String("Reconexao concluida. IP do servidor: ") + WiFi.localIP().toString());
+        return;
+    }
+
+    if (!wifiConnecting) return;
+
+    if (WiFi.status() == WL_CONNECTED) {
+        wifiConnecting = false;
+        if (wifiApActive) {
+            WiFi.softAPdisconnect(true);
+            WiFi.mode(WIFI_STA);
+            wifiApActive = false;
+        }
+        wifiModeLabel = "Cliente Wi-Fi";
+        activeWifiSsid = WiFi.SSID();
+        addLog("REDE", String("Conectado. IP do servidor: ") + WiFi.localIP().toString());
+        return;
+    }
+
+    if (millis() - wifiAttemptStartedAt >= WIFI_CONNECT_TIMEOUT_MS) {
+        wifiConnecting = false;
+        addLog("WARNING", "Falha ao conectar no Wi-Fi salvo. Mantendo AP de configuracao.");
+        startSetupAccessPoint();
+    }
+}
+
+static bool canEnterLightSleep() {
+    if (!systemConfig.lightSleepEnabled) return false;
+    if (wifiApActive && WiFi.softAPgetStationNum() > 0) return false;
+    if (WiFi.status() == WL_CONNECTED && millis() - lastWebRequestAt < LIGHT_SLEEP_WEB_IDLE_MS) return false;
+    if (isGateOpen || vehicleDetected || rfidActive || servoCalibrationMode) return false;
+    if (servoCurrentAngle != servoTargetAngle) return false;
+    if (millis() < LIGHT_SLEEP_IDLE_MS) return false;
+    if (millis() - lastLightSleepAt < LIGHT_SLEEP_IDLE_MS) return false;
+    return true;
+}
+
+static void runLightSleepIfIdle() {
+    if (!canEnterLightSleep()) return;
+
+    lightSleepActive = true;
+    lastLightSleepAt = millis();
+    lightSleepCount++;
+    esp_sleep_enable_timer_wakeup(LIGHT_SLEEP_WAKE_US);
+    esp_light_sleep_start();
+    lightSleepActive = false;
+}
 
 void setup() {
     Serial.begin(115200);
-    delay(10); // Apenas um pequeno respiro no início
-    
-    // Criação do Mutex de sistema para controlar acesso às variáveis em uso pelas Threads
+    WiFi.persistent(false);
+    WiFi.setSleep(false);
+
     logMutex = xSemaphoreCreateMutex();
+    loadSystemConfig();
 
     addLog("SISTEMA", "Iniciando CyberGate Controller...");
-
-    // 1. Conexão WiFi (Poderia ser Access Point se preferir, simplificado para Client)
-    WiFi.begin(ssid, password);
-    addLog("REDE", "Conectando ao WiFi...");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println();
-    addLog("REDE", String("Conectado! IP do Servidor Web: ") + WiFi.localIP().toString());
-
-    // 2. Inicia servidor web
+    connectConfiguredWifi();
     initWebServer();
 
-    // 3. Orquestração FreeRTOS - Criação das Tasks
-    // ----------------------------------------------------
-    // Utilizamos o xTaskCreatePinnedToCore para decidir as prioridades e o núcleo.
-    
-    // Task 1: Sensor. Prioridade média (1) gerando leitura a cada instantes. Núcleo 1 (Padrão para rotinas customizadas)
     xTaskCreatePinnedToCore(
-        sensorTaskCode,   /* Função da Task */
-        "SensorTask",     /* Nome para debug */
-        8192,             /* Tamanho da Pilha — aumentado para suportar SPI + MFRC522 */
-        NULL,             /* Parâmetros. Nenhum. */
-        1,                /* Prioridade baixa/Media */
+        sensorTaskCode,
+        "SensorTask",
+        8192,
+        NULL,
+        1,
         &sensorTaskHandle,
-        1                 /* Núcleo do processador ESP32 (0 ou 1) */
-    );
-    
-    // Task 2: Controle do Portão (Motor/Atuadores). Prioridade alta (2) para que responda rápido a comandos.
-    xTaskCreatePinnedToCore(
-        controlTaskCode,   
-        "ControlTask",     
-        4096,             
-        &controlTaskHandle,
-        2,                /* Prioridade alta que a do Sensor */
-        NULL,             
-        1                 
+        SENSOR_TASK_CORE
     );
 
-    addLog("SISTEMA", "Setup concluído! Tasks estão rodando paralelamente.");
+    xTaskCreatePinnedToCore(
+        controlTaskCode,
+        "ControlTask",
+        4096,
+        NULL,
+        2,
+        &controlTaskHandle,
+        CONTROL_TASK_CORE
+    );
+
+    addLog("SISTEMA", "Setup concluido. SensorTask no core 1, ControlTask no core 0, web server no core Wi-Fi/Async.");
 }
 
-// O Loop principal do Arduino. Como usamos FreeRTOS Tasks separadas, esse loop nativo não fará nada
-// Fica totalmente "Idddle"
 void loop() {
-    vTaskDelay(pdMS_TO_TICKS(1000)); 
+    monitorWifiConnection();
+    runLightSleepIfIdle();
+    vTaskDelay(pdMS_TO_TICKS(500));
 }

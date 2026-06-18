@@ -4,6 +4,9 @@
 #include <LittleFS.h>
 #include "../system_state.h"
 
+static const char* SETUP_AP_SSID = "CyberGate-Setup";
+static const char* SETUP_AP_PASSWORD = "cybergate";
+
 static unsigned long getStackHighWaterBytes(TaskHandle_t handle) {
     if (handle == NULL) return 0;
     return uxTaskGetStackHighWaterMark(handle) * sizeof(StackType_t);
@@ -12,26 +15,6 @@ static unsigned long getStackHighWaterBytes(TaskHandle_t handle) {
 static int getTaskPriority(TaskHandle_t handle) {
     if (handle == NULL) return -1;
     return uxTaskPriorityGet(handle);
-}
-
-static float getEstimatedCpuLoadPct() {
-    float sensorLoad = performanceData[0].callCount
-        ? (float)performanceData[0].totalTimeUs / performanceData[0].callCount / 300000.0f
-        : 0.0f;
-    float controlLoad = performanceData[1].callCount
-        ? (float)performanceData[1].totalTimeUs / performanceData[1].callCount / 200000.0f
-        : 0.0f;
-    float apiLoad = 0.0f;
-    for (uint8_t i = 2; i < 5; i++) {
-        if (performanceData[i].callCount) {
-            apiLoad += ((float)performanceData[i].totalTimeUs / performanceData[i].callCount) / 1000000.0f;
-        }
-    }
-
-    float loadPct = (sensorLoad + controlLoad + apiLoad) * 100.0f;
-    if (loadPct < 0.0f) return 0.0f;
-    if (loadPct > 100.0f) return 100.0f;
-    return loadPct;
 }
 
 static const char* wifiStatusLabel(wl_status_t status) {
@@ -46,14 +29,61 @@ static const char* wifiStatusLabel(wl_status_t status) {
     }
 }
 
+static void markWebRequest() {
+    lastWebRequestAt = millis();
+}
+
+static void ensureSetupAp() {
+    WiFi.mode(WIFI_AP_STA);
+    if (!wifiApActive) {
+        WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASSWORD);
+    }
+    wifiApActive = true;
+    wifiModeLabel = "AP fallback";
+    activeWifiSsid = SETUP_AP_SSID;
+}
+
+static String configJson() {
+    DynamicJsonDocument doc(1024);
+    doc["sensorIntervalMs"] = systemConfig.sensorIntervalMs;
+    doc["gateAutoCloseMs"] = systemConfig.gateAutoCloseMs;
+    doc["lightSleepEnabled"] = systemConfig.lightSleepEnabled;
+    doc["wifiSsidMasked"] = maskedWifiSsid();
+    doc["wifiConnected"] = WiFi.status() == WL_CONNECTED;
+    doc["wifiStatus"] = wifiStatusLabel(WiFi.status());
+    doc["wifiMode"] = wifiModeLabel;
+    doc["apActive"] = wifiApActive;
+    doc["apSsid"] = SETUP_AP_SSID;
+    doc["apIp"] = WiFi.softAPIP().toString();
+
+    String response;
+    serializeJson(doc, response);
+    return response;
+}
+
+static void sendLogsCsv(AsyncWebServerRequest *request) {
+    markWebRequest();
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/csv; charset=utf-8", buildLogsCsv());
+    response->addHeader("Content-Disposition", "attachment; filename=cybergate-logs.csv");
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    response->addHeader("Pragma", "no-cache");
+    request->send(response);
+}
+
 void setupRoutes(AsyncWebServer* server) {
+    server->on("/logs.csv", HTTP_GET, [](AsyncWebServerRequest *request){
+        sendLogsCsv(request);
+    });
 
-    // Rota GET /api/status - Retorna os dados globais do sistema em formato JSON
+    server->on("/api/logs.csv", HTTP_GET, [](AsyncWebServerRequest *request){
+        sendLogsCsv(request);
+    });
+
     server->on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request){
-        unsigned long startUs = micros(); // Para medir desempenho
+        markWebRequest();
+        unsigned long startUs = micros();
 
-        // Cria o documento JSON
-        StaticJsonDocument<512> doc;
+        StaticJsonDocument<1280> doc;
         doc["isGateOpen"] = isGateOpen;
         doc["vehicleDetected"] = vehicleDetected;
         doc["rfidActive"] = rfidActive;
@@ -64,32 +94,84 @@ void setupRoutes(AsyncWebServer* server) {
         doc["lastRfidAt"] = lastRfidAt;
         doc["uptime"] = totalUptime;
         doc["memoryFree"] = freeHeapMemory;
-        
-        // Simulação do tempo que demorou a requisição - Monitoramento de Desempenho
+        doc["servoCurrentAngle"] = servoCurrentAngle;
+        doc["servoTargetAngle"] = servoTargetAngle;
+        doc["servoOpenAngle"] = servoOpenAngle;
+        doc["servoClosedAngle"] = servoClosedAngle;
+        doc["servoCalibrationMode"] = servoCalibrationMode;
+        doc["sensorIntervalMs"] = systemConfig.sensorIntervalMs;
+        doc["gateAutoCloseMs"] = systemConfig.gateAutoCloseMs;
+        doc["lightSleepEnabled"] = systemConfig.lightSleepEnabled;
+        doc["lightSleepActive"] = lightSleepActive;
+        doc["lightSleepCount"] = lightSleepCount;
+        doc["wifiMode"] = wifiModeLabel;
+        doc["wifiApActive"] = wifiApActive;
+        doc["wifiConnected"] = WiFi.status() == WL_CONNECTED;
+
         lastRequestTimeMs = (micros() - startUs) / 1000;
-        doc["requestTime"] = lastRequestTimeMs; 
+        doc["requestTime"] = lastRequestTimeMs;
         recordFunctionPerf(2, micros() - startUs);
-        
-        // Enviamos tudo novamente com esse último campo adicionado
+
         String response;
         serializeJson(doc, response);
-
         request->send(200, "application/json", response);
     });
 
-    // Rota POST /api/control - Rota para ativar os atuadores da página
     server->on("/api/control", HTTP_POST, [](AsyncWebServerRequest *request){
+        markWebRequest();
         unsigned long startUs = micros();
 
-        // Verifica o comando passado na URL ?action=openGate
         if (request->hasParam("action")) {
             String act = request->getParam("action")->value();
-            
+
             if (act == "openGate") {
-                isGateOpen = true; // Muda o estado global
-                gateOpenedAt = millis(); // Marca quando abriu
-                addLog("USUARIO", "Comando de abertura do portão enviado via WEB.");
-                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Portal abrindo\"}");
+                servoCalibrationMode = false;
+                isGateOpen = true;
+                gateOpenedAt = 0;
+                setServoTarget(servoOpenAngle);
+                addLog("USUARIO", "Comando de abertura do portao enviado via web.");
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Portao abrindo\"}");
+            } else if (act == "closeGate") {
+                servoCalibrationMode = false;
+                isGateOpen = false;
+                gateOpenedAt = 0;
+                setServoTarget(servoClosedAngle);
+                addLog("USUARIO", "Comando de fechamento enviado via web.");
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Portao fechando\"}");
+            } else if (act == "stepServo" && request->hasParam("amount")) {
+                int amount = constrain(request->getParam("amount")->value().toInt(), -90, 90);
+                servoCalibrationMode = true;
+                stepServoTarget(amount);
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Posicao ajustada\"}");
+            } else if (act == "saveOpen") {
+                servoCalibrationMode = true;
+                servoOpenAngle = servoCurrentAngle;
+                servoTargetAngle = servoCurrentAngle;
+                saveServoOpenRequested = true;
+                isGateOpen = true;
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Posicao aberta registrada\"}");
+            } else if (act == "saveClosed") {
+                servoCalibrationMode = true;
+                servoClosedAngle = servoCurrentAngle;
+                servoTargetAngle = servoCurrentAngle;
+                saveServoClosedRequested = true;
+                isGateOpen = false;
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Posicao fechada registrada\"}");
+            } else if (act == "testOpen") {
+                servoCalibrationMode = true;
+                isGateOpen = true;
+                setServoTarget(servoOpenAngle);
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Movendo para aberto\"}");
+            } else if (act == "testClosed") {
+                servoCalibrationMode = true;
+                isGateOpen = false;
+                setServoTarget(servoClosedAngle);
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Movendo para fechado\"}");
+            } else if (act == "finishCalibration") {
+                servoCalibrationMode = false;
+                isGateOpen = false;
+                setServoTarget(servoClosedAngle);
+                request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Calibracao concluida\"}");
             } else {
                 request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Comando invalido\"}");
             }
@@ -100,16 +182,13 @@ void setupRoutes(AsyncWebServer* server) {
         recordFunctionPerf(4, micros() - startUs);
     });
 
-    // Rota GET /api/logs - Retorna a fila em memória com as últimas atividades
     server->on("/api/logs", HTTP_GET, [](AsyncWebServerRequest *request){
+        markWebRequest();
         unsigned long startUs = micros();
 
-        // ArduinoJson dinâmico para poder ter array variável
-        DynamicJsonDocument doc(3072); 
+        DynamicJsonDocument doc(8192);
         JsonArray logsArray = doc.createNestedArray("logs");
 
-        // Bloqueamos temporariamente os logs para garantir que ninguém adicione nada na memória
-        // Enquanto o JSON é gerado, para não corromper o array (Thread safety)
         if (xSemaphoreTake(logMutex, pdMS_TO_TICKS(100))) {
             for (const auto& logItem : systemLogs) {
                 JsonObject logObj = logsArray.createNestedObject();
@@ -118,7 +197,7 @@ void setupRoutes(AsyncWebServer* server) {
                 logObj["message"] = logItem.message;
             }
             xSemaphoreGive(logMutex);
-            
+
             recordFunctionPerf(3, micros() - startUs);
             String response;
             serializeJson(doc, response);
@@ -128,14 +207,68 @@ void setupRoutes(AsyncWebServer* server) {
         }
     });
 
-    // Rota GET /api/performance - Retorna métricas de funções e histórico de memória
+    server->on("/api/logs/export", HTTP_GET, [](AsyncWebServerRequest *request){
+        sendLogsCsv(request);
+    });
+
+    server->on("/api/config", HTTP_GET, [](AsyncWebServerRequest *request){
+        markWebRequest();
+        request->send(200, "application/json", configJson());
+    });
+
+    server->on("/api/config", HTTP_POST, [](AsyncWebServerRequest *request){
+        markWebRequest();
+        if (request->hasParam("sensorIntervalMs")) {
+            systemConfig.sensorIntervalMs = constrain(request->getParam("sensorIntervalMs")->value().toInt(), 100, 10000);
+        }
+        if (request->hasParam("gateAutoCloseMs")) {
+            systemConfig.gateAutoCloseMs = constrain(request->getParam("gateAutoCloseMs")->value().toInt(), 1000, 60000);
+        }
+        if (request->hasParam("lightSleepEnabled")) {
+            String value = request->getParam("lightSleepEnabled")->value();
+            systemConfig.lightSleepEnabled = value == "1" || value == "true" || value == "on";
+        }
+        saveSystemConfig();
+        addLog("CONFIG", "Parametros operacionais salvos pela interface web.");
+        request->send(200, "application/json", configJson());
+    });
+
+    server->on("/api/wifi", HTTP_POST, [](AsyncWebServerRequest *request){
+        markWebRequest();
+        if (!request->hasParam("ssid") || !request->hasParam("password")) {
+            request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Informe ssid e password\"}");
+            return;
+        }
+
+        String ssid = request->getParam("ssid")->value();
+        String password = request->getParam("password")->value();
+        setWifiCredentials(ssid, password);
+        addLog("REDE", "Novas credenciais Wi-Fi salvas pela interface.");
+
+        WiFi.disconnect(false, false);
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.begin(systemConfig.wifiSsid.c_str(), systemConfig.wifiPassword.c_str());
+        wifiModeLabel = "Reconectando";
+        activeWifiSsid = systemConfig.wifiSsid;
+        ensureSetupAp();
+
+        request->send(200, "application/json", "{\"status\":\"success\",\"message\":\"Credenciais salvas. O ESP32 tentara reconectar mantendo o AP de configuracao.\"}");
+    });
+
     server->on("/api/performance", HTTP_GET, [](AsyncWebServerRequest *request){
+        markWebRequest();
         DynamicJsonDocument doc(8192);
         doc["uptime"] = totalUptime;
         doc["memoryFree"] = freeHeapMemory;
         doc["lastRequestTimeMs"] = lastRequestTimeMs;
         doc["cpuLoadPct"] = getEstimatedCpuLoadPct();
         doc["cpuFreqMhz"] = ESP.getCpuFreqMHz();
+
+        JsonObject energy = doc.createNestedObject("energy");
+        energy["lightSleepEnabled"] = systemConfig.lightSleepEnabled;
+        energy["lightSleepActive"] = lightSleepActive;
+        energy["lightSleepCount"] = lightSleepCount;
+        energy["lastLightSleepAt"] = lastLightSleepAt;
 
         JsonObject memory = doc.createNestedObject("memory");
         memory["heapTotal"] = ESP.getHeapSize();
@@ -166,11 +299,13 @@ void setupRoutes(AsyncWebServer* server) {
         wl_status_t status = WiFi.status();
         wifi["status"] = wifiStatusLabel(status);
         wifi["connected"] = status == WL_CONNECTED;
-        wifi["mode"] = WiFi.getMode();
+        wifi["mode"] = wifiModeLabel;
         wifi["ssid"] = WiFi.SSID();
         wifi["rssi"] = WiFi.RSSI();
         wifi["localIp"] = WiFi.localIP().toString();
         wifi["mac"] = WiFi.macAddress();
+        wifi["apActive"] = wifiApActive;
+        wifi["apSsid"] = SETUP_AP_SSID;
         wifi["apIp"] = WiFi.softAPIP().toString();
         wifi["apStations"] = WiFi.softAPgetStationNum();
 
@@ -181,13 +316,13 @@ void setupRoutes(AsyncWebServer* server) {
         sensorTask["name"] = "SensorTask";
         sensorTask["priority"] = getTaskPriority(sensorTaskHandle);
         sensorTask["core"] = 1;
-        sensorTask["periodMs"] = 300;
+        sensorTask["periodMs"] = systemConfig.sensorIntervalMs;
         sensorTask["stackFree"] = getStackHighWaterBytes(sensorTaskHandle);
         JsonObject controlTask = taskArray.createNestedObject();
         controlTask["name"] = "ControlTask";
         controlTask["priority"] = getTaskPriority(controlTaskHandle);
-        controlTask["core"] = 1;
-        controlTask["periodMs"] = 200;
+        controlTask["core"] = 0;
+        controlTask["periodMs"] = 10;
         controlTask["stackFree"] = getStackHighWaterBytes(controlTaskHandle);
         JsonObject webTask = taskArray.createNestedObject();
         webTask["name"] = "AsyncWebServer";
@@ -218,5 +353,4 @@ void setupRoutes(AsyncWebServer* server) {
         serializeJson(doc, response);
         request->send(200, "application/json", response);
     });
-
 }

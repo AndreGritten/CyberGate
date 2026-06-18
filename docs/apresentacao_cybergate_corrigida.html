@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberGate - Apresentacao Corrigida</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #111827;
+            --panel: #172033;
+            --panel-2: #202a3d;
+            --text: #f8fafc;
+            --muted: #aeb8c8;
+            --accent: #20c997;
+            --accent-2: #f59e0b;
+            --line: rgba(255, 255, 255, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        main {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+        }
+
+        .slide {
+            min-height: 100vh;
+            padding: 56px 72px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 26px;
+            scroll-snap-align: start;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .slide:nth-child(even) {
+            background: #0f172a;
+        }
+
+        .kicker {
+            color: var(--accent);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+
+        h1 {
+            max-width: 1040px;
+            margin: 0;
+            font-size: 64px;
+            line-height: 1.04;
+            letter-spacing: 0;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 42px;
+            line-height: 1.12;
+            letter-spacing: 0;
+        }
+
+        h3 {
+            margin: 0 0 10px;
+            font-size: 22px;
+            letter-spacing: 0;
+        }
+
+        p {
+            max-width: 980px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 25px;
+            line-height: 1.42;
+        }
+
+        ul,
+        ol {
+            max-width: 1060px;
+            margin: 0;
+            padding-left: 30px;
+            color: var(--muted);
+            font-size: 25px;
+            line-height: 1.46;
+        }
+
+        li + li {
+            margin-top: 10px;
+        }
+
+        code {
+            color: #e5f6ff;
+            background: rgba(148, 163, 184, 0.14);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+
+        .meta {
+            display: grid;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 22px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            max-width: 1120px;
+        }
+
+        .box {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 22px;
+        }
+
+        .box p,
+        .box li {
+            font-size: 20px;
+        }
+
+        .box ul {
+            padding-left: 22px;
+        }
+
+        .tagline {
+            color: var(--accent-2);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .footer {
+            position: fixed;
+            right: 24px;
+            bottom: 18px;
+            color: rgba(248, 250, 252, 0.62);
+            font-size: 14px;
+        }
+
+        @media (max-width: 760px) {
+            .slide {
+                padding: 36px 24px;
+            }
+
+            h1 {
+                font-size: 42px;
+            }
+
+            h2 {
+                font-size: 32px;
+            }
+
+            p,
+            ul,
+            ol {
+                font-size: 20px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+
+            main {
+                height: auto;
+                overflow: visible;
+            }
+
+            .slide {
+                min-height: 100vh;
+                page-break-after: always;
+                background: white !important;
+                color: black;
+                border: 0;
+            }
+
+            p,
+            ul,
+            ol,
+            .meta {
+                color: #333;
+            }
+
+            .box {
+                background: white;
+                border: 1px solid #bbb;
+            }
+
+            .footer {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="slide">
+            <div class="kicker">CyberGate</div>
+            <h1>Sistema ciberfisico de controle de acesso com ESP32</h1>
+            <p>Sistema embarcado com deteccao ultrassonica, autenticacao RFID, servo motor, interface web e monitoramento de performance.</p>
+            <div class="meta">
+                <span>Performance em Sistemas Ciberfisicos - PUCPR</span>
+                <span>Andre Gritten, Mateus Furtado, Joao Mezari e Gustavo Isdra</span>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Objetivo</div>
+            <h2>Implementar e validar um controle de acesso fisico com observabilidade embarcada</h2>
+            <p>O projeto demonstra a integracao entre sensores, atuador, concorrencia em FreeRTOS, interface web e persistencia local para analisar comportamento e performance do sistema.</p>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Escopo implementado</div>
+            <h2>Funcionalidades reais do firmware</h2>
+            <ul>
+                <li>Deteccao de veiculo por sensor ultrassonico HC-SR04.</li>
+                <li>Autenticacao por RC522/MFRC522 com UID autorizado no firmware.</li>
+                <li>Abertura e fechamento por servo motor com auto-fechamento.</li>
+                <li>Interface web embarcada com status, controle, logs, configuracao e performance.</li>
+                <li>Persistencia local com LittleFS e configuracoes com Preferences.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Hardware</div>
+            <h2>Componentes utilizados</h2>
+            <div class="grid">
+                <div class="box"><h3>ESP32</h3><p>Microcontrolador dual core com Wi-Fi integrado e suporte a FreeRTOS.</p></div>
+                <div class="box"><h3>HC-SR04</h3><p>Sensor ultrassonico usado para confirmar a presenca do veiculo.</p></div>
+                <div class="box"><h3>RC522/MFRC522</h3><p>Leitor RFID usado na autenticacao da tag.</p></div>
+                <div class="box"><h3>Servo motor</h3><p>Atuador do portao, com posicoes aberta e fechada calibraveis.</p></div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Arquitetura</div>
+            <h2>Organizacao real das tasks</h2>
+            <ul>
+                <li><code>SensorTask</code> no core 1: ultrassonico, RFID e decisao de abertura.</li>
+                <li><code>ControlTask</code> no core 0: servo, auto-fechamento, metricas e persistencia periodica.</li>
+                <li><code>AsyncWebServer</code>: paginas estaticas e endpoints REST.</li>
+                <li><code>loop()</code>: monitoramento do Wi-Fi e entrada em Light Sleep quando ocioso.</li>
+            </ul>
+            <p>Arquivos como <code>rfid_task.cpp</code>, <code>web_task.cpp</code> e <code>log_task.cpp</code> estao vazios e nao representam tasks ativas.</p>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Fluxo operacional</div>
+            <h2>Da deteccao a abertura do portao</h2>
+            <ol>
+                <li>O ultrassonico mede distancia com interrupcao, timeout e mediana de amostras.</li>
+                <li>Com veiculo confirmado, o RFID e ativado.</li>
+                <li>A tag lida e comparada com a lista autorizada do firmware.</li>
+                <li>Se autorizada, o portao abre e o evento e registrado.</li>
+                <li>Depois do intervalo configurado, o portao fecha automaticamente.</li>
+            </ol>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Interface web</div>
+            <h2>Dashboard embarcado no ESP32</h2>
+            <ul>
+                <li>Paginas hospedadas no LittleFS.</li>
+                <li>Status em tempo real por consultas periodicas.</li>
+                <li>Controle remoto do portao e calibracao do servo.</li>
+                <li>Logs, exportacao CSV, configuracao operacional e Wi-Fi.</li>
+                <li>Performance com heap, CPU estimada, rede, sensores, tasks e historicos.</li>
+            </ul>
+            <p class="tagline">A comunicacao atual e API REST com polling, nao WebSocket.</p>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">API REST</div>
+            <h2>Endpoints implementados</h2>
+            <div class="grid">
+                <div class="box"><h3>Status</h3><p><code>GET /api/status</code></p></div>
+                <div class="box"><h3>Controle</h3><p><code>POST /api/control</code></p></div>
+                <div class="box"><h3>Logs</h3><p><code>GET /api/logs</code> e exportacao CSV</p></div>
+                <div class="box"><h3>Performance</h3><p><code>GET /api/performance</code></p></div>
+                <div class="box"><h3>Configuracao</h3><p><code>GET/POST /api/config</code></p></div>
+                <div class="box"><h3>Wi-Fi</h3><p><code>POST /api/wifi</code></p></div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Observabilidade</div>
+            <h2>Metricas e persistencia</h2>
+            <ul>
+                <li>Eventos de sensor, RFID, controle, usuario, rede, configuracao e erros.</li>
+                <li>Heap livre, heap minimo, maior bloco alocavel, PSRAM e uso de LittleFS.</li>
+                <li>Tempo ultimo, medio e maximo das funcoes instrumentadas.</li>
+                <li>Stack livre das tasks principais.</li>
+                <li>Logs e amostras de metricas persistidos no LittleFS com rotacao por tamanho.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Rede e energia</div>
+            <h2>Conectividade e baixo consumo</h2>
+            <ul>
+                <li>O ESP32 tenta conectar ao Wi-Fi salvo.</li>
+                <li>Em falha ou ausencia de credenciais, abre AP de configuracao <code>CyberGate-Setup</code>.</li>
+                <li>Light Sleep e usado quando o sistema esta ocioso.</li>
+                <li>A entrada em Light Sleep e bloqueada durante deteccao, abertura, calibracao, movimento do servo ou acesso web recente.</li>
+                <li>O despertar atual e feito por timer, nao por interrupcao externa de GPIO.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Validacao</div>
+            <h2>Testes coerentes com o projeto</h2>
+            <ul>
+                <li>Teste isolado do ultrassonico, RFID e servo.</li>
+                <li>Fluxo integrado: detectar veiculo, validar tag e abrir portao.</li>
+                <li>Monitoramento via dashboard durante execucao.</li>
+                <li>Exportacao de logs para evidenciar comportamento.</li>
+                <li>Resultados como 24 horas de execucao devem ser apresentados somente com logs ou medicoes coletadas.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Limitacoes atuais</div>
+            <h2>Pontos importantes para nao superestimar a implementacao</h2>
+            <ul>
+                <li>UIDs autorizados ficam fixos no firmware.</li>
+                <li>Nao ha banco de dados externo.</li>
+                <li>Nao ha WebSocket implementado.</li>
+                <li>A estimativa de CPU e aproximada.</li>
+                <li>Alguns arquivos de services/tasks estao reservados para evolucao futura, mas ainda vazios.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <div class="kicker">Conclusao</div>
+            <h2>CyberGate demonstra controle fisico, concorrencia e observabilidade em baixo custo</h2>
+            <p>O sistema implementa um prototipo funcional com ESP32, FreeRTOS, sensor ultrassonico, RFID, servo motor, interface web embarcada, API REST, persistencia local e metricas de desempenho. A apresentacao corrigida descreve exatamente essa arquitetura.</p>
+        </section>
+    </main>
+    <div class="footer">Use Page Down/Page Up ou role para navegar</div>
+</body>
+</html>

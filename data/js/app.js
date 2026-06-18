@@ -2,6 +2,8 @@ const API_STATUS = '/api/status';
 const API_CONTROL = '/api/control';
 const API_LOGS = '/api/logs';
 const API_PERFORMANCE = '/api/performance';
+const API_CONFIG = '/api/config';
+const API_WIFI = '/api/wifi';
 
 const chartColors = {
     grid: 'rgba(156, 163, 175, 0.18)',
@@ -141,9 +143,15 @@ function drawMultiLineChart(canvasId, series, options = {}) {
     const chartWidth = width - pad.left - pad.right;
     const chartHeight = height - pad.top - pad.bottom;
     const allValues = activeSeries.flatMap(item => item.values);
-    const min = options.min ?? Math.min(...allValues);
-    const max = options.max ?? Math.max(...allValues);
-    const range = Math.max(1, max - min);
+    let min = options.min ?? Math.min(...allValues);
+    let max = options.max ?? Math.max(...allValues);
+    if (options.dynamicPadding) {
+        const spread = Math.max(0.1, max - min);
+        const padValue = Math.max(options.minPadding ?? 1, spread * 0.25);
+        min = Math.max(options.floor ?? -Infinity, min - padValue);
+        max = Math.min(options.ceil ?? Infinity, max + padValue);
+    }
+    const range = Math.max(0.1, max - min);
 
     ctx.clearRect(0, 0, width, height);
     ctx.strokeStyle = chartColors.grid;
@@ -173,6 +181,15 @@ function drawMultiLineChart(canvasId, series, options = {}) {
             else ctx.lineTo(x, y);
         });
         ctx.stroke();
+
+        item.values.forEach((value, index) => {
+            const x = pad.left + (item.values.length === 1 ? chartWidth / 2 : (chartWidth / (item.values.length - 1)) * index);
+            const y = pad.top + chartHeight - ((value - min) / range) * chartHeight;
+            ctx.fillStyle = item.color;
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
     });
 
     ctx.textAlign = 'left';
@@ -265,6 +282,19 @@ function renderTaskTable(tasks) {
     });
 }
 
+function renderCoreSummary(tasks) {
+    const items = tasks?.items || [];
+    const core0 = items.filter(task => String(task.core) === '0').map(task => task.name).join(', ') || '--';
+    const core1 = items.filter(task => String(task.core) === '1').map(task => task.name).join(', ') || '--';
+    const asyncCore = items.filter(task => String(task.core).includes('WiFi') || String(task.core).includes('Async')).map(task => task.name).join(', ') || '--';
+
+    updateMetricList('coreSummaryList', [
+        { label: 'Core 0', value: core0 },
+        { label: 'Core 1', value: core1 },
+        { label: 'Wi-Fi/Async', value: asyncCore }
+    ]);
+}
+
 function updateGateScene(data) {
     const scenes = [
         document.getElementById('gateScene'),
@@ -333,6 +363,9 @@ async function fetchStatus() {
         setText('rfidDetail', `UID: ${data.lastUid || '--'}`);
         setText('uptimeVal', `${data.uptime || 0}s`);
         setText('heapVal', `Heap: ${formatBytes(data.memoryFree)}`);
+        setText('servoCurrentAngle', `${data.servoCurrentAngle} graus${data.servoCurrentAngle !== data.servoTargetAngle ? ' (movendo)' : ''}`);
+        setText('servoClosedAngle', `${data.servoClosedAngle} graus`);
+        setText('servoOpenAngle', `${data.servoOpenAngle} graus`);
     } catch(err) {
         console.error('Falha ao buscar status', err);
         const gateEl = document.getElementById('gateStatus');
@@ -341,6 +374,26 @@ async function fetchStatus() {
             setStatusClass(gateEl, 'warning');
         }
     }
+}
+
+async function servoAction(action, amount = null) {
+    const feedback = document.getElementById('calibrationFeedback');
+    const query = new URLSearchParams({ action });
+    if (amount !== null) query.set('amount', amount);
+
+    try {
+        const res = await fetch(`${API_CONTROL}?${query}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Falha no comando');
+        if (feedback) feedback.innerHTML = `<p class="success-text">${data.message}</p>`;
+        await fetchStatus();
+    } catch (err) {
+        if (feedback) feedback.innerHTML = `<p class="danger-text">${err.message}</p>`;
+    }
+}
+
+function stepServo(amount) {
+    return servoAction('stepServo', amount);
 }
 
 async function fetchPerformance() {
@@ -358,6 +411,8 @@ async function fetchPerformance() {
         setText('wifiDetailVal', `${data.wifi?.localIp || '--'} | RSSI ${data.wifi?.rssi ?? '--'} dBm`);
         setText('sensorVal', data.sensors?.vehicleDetected ? 'Veiculo' : 'Livre');
         setText('sensorDetailVal', `${Number(data.sensors?.distanceCm || 0).toFixed(1)} cm | RFID ${data.sensors?.rfidActive ? 'ativo' : 'inativo'}`);
+        setText('sleepVal', data.energy?.lightSleepEnabled ? 'Ativo' : 'Desligado');
+        setText('sleepDetailVal', `${data.energy?.lightSleepCount ?? 0} ciclos | ${data.energy?.lightSleepActive ? 'dormindo' : 'acordado'}`);
 
         updateMetricList('resourceList', [
             { label: 'Heap total', value: formatBytes(data.memory?.heapTotal) },
@@ -381,15 +436,23 @@ async function fetchPerformance() {
             { label: 'RSSI', value: `${data.wifi?.rssi ?? '--'} dBm` },
             { label: 'MAC', value: data.wifi?.mac || '--' },
             { label: 'Modo Wi-Fi', value: data.wifi?.mode ?? '--' },
+            { label: 'AP ativo', value: data.wifi?.apActive ? 'sim' : 'nao' },
             { label: 'IP do AP', value: data.wifi?.apIp || '--' },
             { label: 'Clientes no AP', value: data.wifi?.apStations ?? '--' }
         ]);
 
         renderTaskTable(data.tasks);
+        renderCoreSummary(data.tasks);
 
         pushHistory('cpu', data.cpuLoadPct);
-        pushHistory('heap', data.memory?.heapFree || data.memoryFree);
-        pushHistory('psram', data.memory?.psramFree || 0);
+        const heapTotal = Number(data.memory?.heapTotal || 0);
+        const heapFree = Number(data.memory?.heapFree || data.memoryFree || 0);
+        const psramTotal = Number(data.memory?.psramTotal || 0);
+        const psramFree = Number(data.memory?.psramFree || 0);
+        const heapUsedPct = heapTotal > 0 ? ((heapTotal - heapFree) / heapTotal) * 100 : 0;
+        const psramUsedPct = psramTotal > 0 ? ((psramTotal - psramFree) / psramTotal) * 100 : 0;
+        pushHistory('heap', heapUsedPct);
+        pushHistory('psram', psramUsedPct);
         pushHistory('distance', data.sensors?.distanceCm || 0);
         pushHistory('rfid', data.sensors?.rfidActive ? 1 : 0);
 
@@ -410,10 +473,10 @@ async function fetchPerformance() {
         drawMemoryChart(data.memoryHistory || []);
         drawFunctionChart(data.functions || []);
         drawMultiLineChart('resourceChartCanvas', [
-            { label: 'CPU %', color: chartColors.cpu, values: performanceHistory.cpu },
-            { label: 'Heap KB', color: chartColors.memory, values: performanceHistory.heap.map(value => value / 1024) },
-            { label: 'PSRAM KB', color: chartColors.psram, values: performanceHistory.psram.map(value => value / 1024) }
-        ], { format: value => value.toFixed(0) });
+            { label: 'CPU %', color: chartColors.cpu, values: performanceHistory.cpu.length ? performanceHistory.cpu : [Number(data.cpuLoadPct || 0)] },
+            { label: 'Heap usado %', color: chartColors.memory, values: performanceHistory.heap.length ? performanceHistory.heap : [heapUsedPct] },
+            { label: 'PSRAM usada %', color: chartColors.psram, values: performanceHistory.psram.length ? performanceHistory.psram : [psramUsedPct] }
+        ], { floor: 0, ceil: 100, dynamicPadding: true, minPadding: 2, format: value => value.toFixed(1) + '%' });
         drawMultiLineChart('sensorChartCanvas', [
             { label: 'Distancia cm', color: chartColors.sensor, values: performanceHistory.distance },
             { label: 'RFID ativo', color: chartColors.rfid, values: performanceHistory.rfid.map(value => value * 10) }
@@ -423,24 +486,25 @@ async function fetchPerformance() {
     }
 }
 
-async function openGate() {
-    const btn = document.getElementById('btnOpenGate');
+async function controlGate(action) {
+    const openBtn = document.getElementById('btnOpenGate');
+    const closeBtn = document.getElementById('btnCloseGate');
     const fb = document.getElementById('actionFeedback');
-    if (!btn) return;
+    if (!openBtn || !closeBtn) return;
 
-    btn.disabled = true;
-    btn.textContent = 'Enviando...';
+    openBtn.disabled = true;
+    closeBtn.disabled = true;
     if (fb) fb.textContent = '';
 
     try {
-        const res = await fetch(API_CONTROL + '?action=openGate', { method: 'POST' });
+        const res = await fetch(API_CONTROL + '?action=' + action, { method: 'POST' });
         const data = await res.json();
 
         if (fb) {
             const p = document.createElement('p');
             p.className = data.status === 'success' ? 'success-text' : 'danger-text';
             p.textContent = data.status === 'success'
-                ? 'Comando enviado para a task de controle.'
+                ? data.message
                 : 'Erro ao processar comando.';
             fb.appendChild(p);
         }
@@ -455,10 +519,14 @@ async function openGate() {
     }
 
     setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = 'Abrir portao';
+        openBtn.disabled = false;
+        closeBtn.disabled = false;
         if (fb) fb.textContent = '';
-    }, 3000);
+    }, 1500);
+}
+
+function openGate() {
+    return controlGate('openGate');
 }
 
 function badgeClass(type) {
@@ -503,4 +571,73 @@ async function fetchLogs() {
     } catch(err) {
         console.error('Falha ao puxar logs');
     }
+}
+
+async function loadConfig() {
+    const status = document.getElementById('configStatus');
+    try {
+        const res = await fetch(API_CONFIG);
+        const data = await res.json();
+        if (!res.ok) throw new Error('Falha ao carregar configuracao');
+
+        const sensor = document.getElementById('sensorIntervalMs');
+        const close = document.getElementById('gateAutoCloseMs');
+        const sleep = document.getElementById('lightSleepEnabled');
+        if (sensor) sensor.value = data.sensorIntervalMs;
+        if (close) close.value = data.gateAutoCloseMs;
+        if (sleep) sleep.checked = !!data.lightSleepEnabled;
+
+        updateMetricList('wifiConfigList', [
+            { label: 'Status', value: data.wifiStatus || '--' },
+            { label: 'Modo', value: data.wifiMode || '--' },
+            { label: 'Wi-Fi salvo', value: data.wifiSsidMasked || 'nao configurado' },
+            { label: 'AP fallback', value: data.apActive ? data.apSsid : 'inativo' },
+            { label: 'IP do AP', value: data.apIp || '--' }
+        ]);
+
+        if (status) {
+            status.textContent = data.wifiConnected ? 'Wi-Fi conectado' : 'AP de configuracao';
+            status.className = 'system-pill ' + (data.wifiConnected ? 'success' : 'warning');
+        }
+    } catch (err) {
+        if (status) {
+            status.textContent = 'Falha ao carregar';
+            status.className = 'system-pill danger';
+        }
+    }
+}
+
+async function saveOperationalConfig(event) {
+    event.preventDefault();
+    const params = new URLSearchParams({
+        sensorIntervalMs: document.getElementById('sensorIntervalMs').value,
+        gateAutoCloseMs: document.getElementById('gateAutoCloseMs').value,
+        lightSleepEnabled: document.getElementById('lightSleepEnabled').checked ? '1' : '0'
+    });
+
+    const res = await fetch(`${API_CONFIG}?${params}`, { method: 'POST' });
+    if (!res.ok) throw new Error('Falha ao salvar configuracao');
+    await loadConfig();
+}
+
+async function saveWifiConfig(event) {
+    event.preventDefault();
+    const params = new URLSearchParams({
+        ssid: document.getElementById('wifiSsid').value,
+        password: document.getElementById('wifiPassword').value
+    });
+
+    const res = await fetch(`${API_WIFI}?${params}`, { method: 'POST' });
+    if (!res.ok) throw new Error('Falha ao salvar Wi-Fi');
+    document.getElementById('wifiPassword').value = '';
+    await loadConfig();
+}
+
+function initConfigPage() {
+    const opForm = document.getElementById('operationalConfigForm');
+    const wifiForm = document.getElementById('wifiConfigForm');
+    if (opForm) opForm.addEventListener('submit', saveOperationalConfig);
+    if (wifiForm) wifiForm.addEventListener('submit', saveWifiConfig);
+    loadConfig();
+    setInterval(loadConfig, 5000);
 }

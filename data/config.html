@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberGate - Configuracao</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-mark"></span>
+            <span>CyberGate</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Visao Geral</a></li>
+            <li><a href="/control.html">Controle</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/metrics.html">Performance</a></li>
+            <li><a href="/config.html" class="active">Configuracao</a></li>
+            <li><a href="/about.html">Sobre</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+        </ul>
+    </nav>
+
+    <main class="content">
+        <section class="page-header">
+            <div>
+                <span class="eyebrow">Parametros dinamicos</span>
+                <h1>Configuracao</h1>
+                <p>Ajustes persistidos no ESP32 sem regravacao de firmware.</p>
+            </div>
+            <div id="configStatus" class="system-pill">Carregando...</div>
+        </section>
+
+        <section class="resource-grid">
+            <article class="card">
+                <h3>Operacao</h3>
+                <form id="operationalConfigForm" class="config-form">
+                    <label>Frequencia dos sensores (ms)
+                        <input id="sensorIntervalMs" type="number" min="100" max="10000" step="50">
+                    </label>
+                    <label>Fechamento automatico (ms)
+                        <input id="gateAutoCloseMs" type="number" min="1000" max="60000" step="500">
+                    </label>
+                    <label class="check-row">
+                        <input id="lightSleepEnabled" type="checkbox">
+                        <span>Light Sleep quando o sistema estiver ocioso</span>
+                    </label>
+                    <button class="action-btn" type="submit">Salvar configuracao</button>
+                </form>
+            </article>
+
+            <article class="card">
+                <h3>Wi-Fi e AP</h3>
+                <div id="wifiConfigList" class="metric-list"></div>
+                <form id="wifiConfigForm" class="config-form">
+                    <label>SSID
+                        <input id="wifiSsid" type="text" autocomplete="off">
+                    </label>
+                    <label>Senha
+                        <input id="wifiPassword" type="password" autocomplete="new-password">
+                    </label>
+                    <button class="action-btn" type="submit">Salvar Wi-Fi</button>
+                </form>
+            </article>
+        </section>
+    </main>
+
+    <script src="/js/app.js?v=4"></script>
+    <script>
+        window.onload = initConfigPage;
+    </script>
+</body>
+</html>

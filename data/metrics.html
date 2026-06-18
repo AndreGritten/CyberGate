@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberGate - Metricas</title>
+    <title>CyberGate - Performance</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -16,7 +16,10 @@
             <li><a href="/">Visao Geral</a></li>
             <li><a href="/control.html">Controle</a></li>
             <li><a href="/logs.html">Logs</a></li>
-            <li><a href="/metrics.html" class="active">Metricas</a></li>
+            <li><a href="/metrics.html" class="active">Performance</a></li>
+            <li><a href="/config.html">Configuracao</a></li>
+            <li><a href="/about.html">Sobre</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
         </ul>
     </nav>
 
@@ -24,7 +27,7 @@
         <section class="page-header">
             <div>
                 <span class="eyebrow">Performance e observabilidade</span>
-                <h1>Metricas do ESP32</h1>
+                <h1>Performance do ESP32</h1>
                 <p>Uso de recursos, sensores, rede, tasks e tempo das funcoes principais.</p>
             </div>
         </section>
@@ -65,6 +68,12 @@
                 <div id="sensorVal" class="metric-value compact-value">--</div>
                 <div id="sensorDetailVal" class="metric-label">--</div>
             </article>
+
+            <article class="card metric-card">
+                <h3>Energia</h3>
+                <div id="sleepVal" class="metric-value compact-value">--</div>
+                <div id="sleepDetailVal" class="metric-label">Light Sleep</div>
+            </article>
         </section>
 
         <section class="resource-grid">
@@ -83,7 +92,7 @@
             <article class="card">
                 <h3>Uso de recursos</h3>
                 <canvas id="resourceChartCanvas" class="metric-chart"></canvas>
-                <div class="metric-label chart-caption">CPU estimada, heap e PSRAM ao longo das coletas</div>
+                <div class="metric-label chart-caption">CPU, heap usado e PSRAM usada com escala dinamica para evidenciar variacoes pequenas</div>
             </article>
 
             <article class="card">
@@ -115,6 +124,7 @@
 
         <section class="card full-card">
             <h3>Tasks e threads</h3>
+            <div id="coreSummaryList" class="metric-list core-summary"></div>
             <div class="table-container">
                 <table class="perf-table">
                     <thead>
@@ -148,7 +158,7 @@
         </section>
     </main>
 
-    <script src="/js/app.js"></script>
+    <script src="/js/app.js?v=4"></script>
     <script>
         setInterval(() => fetchPerformance(), 2000);
         window.onload = fetchPerformance;
